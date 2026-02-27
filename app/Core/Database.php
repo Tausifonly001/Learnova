@@ -14,18 +14,21 @@ class Database
     public static function connection(): PDO
     {
         if (self::$instance === null) {
+            $db = config('database');
             $dsn = sprintf(
-                'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
-                env('DB_HOST', '127.0.0.1'),
-                env('DB_PORT', '3306'),
-                env('DB_NAME', 'learnova')
+                '%s:host=%s;port=%s;dbname=%s;charset=%s',
+                $db['driver'] ?? 'mysql',
+                $db['host'] ?? '127.0.0.1',
+                $db['port'] ?? '3306',
+                $db['database'] ?? 'learnova',
+                $db['charset'] ?? 'utf8mb4'
             );
 
             try {
                 self::$instance = new PDO(
                     $dsn,
-                    (string) env('DB_USER', 'root'),
-                    (string) env('DB_PASS', ''),
+                    (string) ($db['username'] ?? 'root'),
+                    (string) ($db['password'] ?? ''),
                     [
                         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -33,9 +36,7 @@ class Database
                     ]
                 );
             } catch (PDOException $exception) {
-                http_response_code(500);
-                echo 'Database connection failed. Check .env settings.';
-                exit;
+                throw new \RuntimeException('Database connection failed. Check .env settings.', 0, $exception);
             }
         }
 

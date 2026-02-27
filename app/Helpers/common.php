@@ -16,6 +16,30 @@ function app_url(string $path = ''): string
     return $path ? $url . '/' . ltrim($path, '/') : $url;
 }
 
+function config(string $key, mixed $default = null): mixed
+{
+    static $cache = [];
+
+    [$file, $nested] = array_pad(explode('.', $key, 2), 2, null);
+
+    if (!isset($cache[$file])) {
+        $path = base_path('app/Config/' . $file . '.php');
+        $cache[$file] = is_file($path) ? require $path : [];
+    }
+
+    $value = $cache[$file];
+    if ($nested !== null) {
+        foreach (explode('.', $nested) as $segment) {
+            if (!is_array($value) || !array_key_exists($segment, $value)) {
+                return $default;
+            }
+            $value = $value[$segment];
+        }
+    }
+
+    return $value ?? $default;
+}
+
 function requireAuth(): void
 {
     if (empty($_SESSION['auth'])) {
