@@ -11,12 +11,12 @@ class Course
 {
     public function list(array $filters): array
     {
-        $sql = 'SELECT c.id, c.title, c.slug, c.thumbnail_url, c.level, c.status, cat.name AS category_name,
-                       COALESCE(AVG(r.rating),0) AS avg_rating, p.amount, p.currency
+        $sql = 'SELECT c.id, c.title, c.slug, c.thumbnail_path AS thumbnail_url, c.level, c.status, cat.name AS category_name,
+                       COALESCE(AVG(r.rating), 0) AS avg_rating, p.one_time_price AS amount, p.currency
                 FROM courses c
                 INNER JOIN categories cat ON cat.id = c.category_id
                 LEFT JOIN reviews r ON r.course_id = c.id
-                LEFT JOIN pricing p ON p.course_id = c.id AND p.price_type = "one_time"
+                LEFT JOIN pricing p ON p.course_id = c.id
                 WHERE c.status = "approved"';
 
         $params = [];
@@ -24,12 +24,13 @@ class Course
             $sql .= ' AND (c.title LIKE :search OR c.short_description LIKE :search)';
             $params['search'] = '%' . $filters['search'] . '%';
         }
+
         if (!empty($filters['category_id'])) {
             $sql .= ' AND c.category_id = :category_id';
             $params['category_id'] = (int) $filters['category_id'];
         }
 
-        $sql .= ' GROUP BY c.id';
+        $sql .= ' GROUP BY c.id, c.title, c.slug, c.thumbnail_path, c.level, c.status, cat.name, p.one_time_price, p.currency';
 
         if (($filters['sort'] ?? '') === 'rating_desc') {
             $sql .= ' ORDER BY avg_rating DESC';

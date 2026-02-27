@@ -1,24 +1,13 @@
-# 🎓 Learnova (Core PHP MVC)
+# Learnova — Phase 1 Foundation (Architecture + Database)
 
-Production-oriented starter for a secure, mobile-first, SPA-like course marketplace.
-
-## Implemented in this delivery
-- **Phase 1** architecture + normalized schema + seeds.
-- **Phase 2** foundational auth/security (student/creator registration, admin-seeded login restriction, CSRF, input validation, session regeneration, role guards helpers, login rate limiting via audit log scan).
-- **Phase 3** SPA-like shell baseline (single entry router, AJAX APIs, History API hooks, loader, toasts, GSAP/AOS integration, mobile-first UI).
-
----
-
-## Folder Structure
+## Updated Folder Tree
 
 ```txt
 Learnova/
 ├─ app/
 │  ├─ Config/
+│  │  └─ Config.php
 │  ├─ Controllers/
-│  │  ├─ AuthController.php
-│  │  ├─ CourseController.php
-│  │  └─ PageController.php
 │  ├─ Core/
 │  │  ├─ Database.php
 │  │  ├─ Response.php
@@ -27,85 +16,79 @@ Learnova/
 │  │  ├─ Session.php
 │  │  ├─ Validator.php
 │  │  └─ View.php
-│  ├─ Helpers/common.php
+│  ├─ Helpers/
+│  │  └─ common.php
 │  ├─ Models/
-│  │  ├─ Course.php
-│  │  └─ User.php
 │  └─ Views/
-│     ├─ layouts/app.php
-│     ├─ pages/home.php
-│     └─ partials/auth_modals.php
 ├─ bootstrap/
 │  ├─ app.php
 │  └─ env.php
 ├─ database/
-│  ├─ migrations/001_init.sql
-│  └─ seeds/001_seed.sql
+│  ├─ database.sql
+│  ├─ migrations/
+│  │  └─ 001_init.sql
+│  └─ seeds/
+│     └─ 001_seed.sql
 ├─ public/
-│  ├─ assets/js/app.js
+│  ├─ assets/
+│  ├─ db-test.php
 │  └─ index.php
 ├─ routes/
 │  ├─ api.php
 │  └─ web.php
 ├─ storage/
-├─ .env.example
-└─ README.md
+└─ .env.example
 ```
 
----
+## What Phase 1 Includes
+
+- MVC-friendly folder structure for Core PHP app organization.
+- `.env.example` environment template.
+- Config loader (`App\Config\Config`) wired via `bootstrap/env.php`.
+- PDO singleton (`App\Core\Database`) for centralized DB access.
+- Fully normalized MySQL schema in `database/database.sql` plus split migration/seed files.
+- Tables included:
+  - users, profiles, creator_verification
+  - categories, tags, course_tags
+  - courses, course_sections, lessons, pricing
+  - orders, order_items, payments
+  - subscriptions, user_subscriptions
+  - enrollments, lesson_progress
+  - reviews, wishlists
+  - coupons, coupon_usage
+  - payouts
+  - reports (with compatibility view: reports_flags)
+  - audit_logs
+- Seed data:
+  - Admin user
+  - Demo creator and student
+  - Sample categories and tags
+  - One approved demo course + section + lesson + pricing
+- DB connection test page at `/public/db-test.php`.
 
 ## XAMPP Setup (htdocs/Learnova)
-1. Copy project to `xampp/htdocs/Learnova`.
-2. Create `.env` from `.env.example` and adjust DB values.
-3. Start **Apache** and **MySQL** in XAMPP.
-4. Run SQL files in order:
-   1) `database/migrations/001_init.sql`
-   2) `database/seeds/001_seed.sql`
-5. Open: `http://localhost/Learnova/public`
 
-### Seeded admin
-- Email: `admin@learnova.test`
-- Password hash is seeded in SQL; replace with your own generated hash before production.
+1. Put project under `xampp/htdocs/Learnova`.
+2. Copy `.env.example` to `.env` and set DB credentials.
+3. Start Apache + MySQL in XAMPP.
+4. Import SQL:
+   - Preferred: run `database/database.sql` once.
+   - Alternative: run `database/migrations/001_init.sql`, then `database/seeds/001_seed.sql`.
+5. Open:
+   - App entry: `http://localhost/Learnova/public`
+   - DB health check: `http://localhost/Learnova/public/db-test.php`
 
----
+## Test Checklist
 
-## API JSON Contract
-All API endpoints return:
+- [ ] `.env` loads expected values.
+- [ ] `Database::connection()` returns active PDO instance.
+- [ ] All tables are created with foreign keys and indexes.
+- [ ] Seed users/categories/tags/demo course inserted.
+- [ ] `db-test.php` reports connection `ok`.
 
-```json
-{
-  "success": true,
-  "message": "",
-  "data": {},
-  "errors": {}
-}
-```
+## Regression Checklist (Phase 1 baseline)
 
----
-
-## Regression Testing Checklist
-
-### Phase 1
-- [ ] All schema tables created with foreign keys and indexes.
-- [ ] Seed admin and categories inserted.
-- [ ] DB connection via PDO singleton works.
-
-### Phase 2
-- [ ] Student registration succeeds.
-- [ ] Creator registration succeeds.
-- [ ] Admin account cannot login via non-admin portal payload.
-- [ ] CSRF invalid token returns 419 JSON response.
-- [ ] Repeated failed logins trigger 429 rate-limit response.
-- [ ] Session ID regenerates on successful login.
-
-### Phase 3
-- [ ] Home renders without full refresh.
-- [ ] Course list loads via AJAX.
-- [ ] Loader/toast work for API feedback.
-- [ ] AOS animation initialized.
-- [ ] GSAP transition triggers on SPA navigation links.
-
----
-
-## Backward compatibility note
-Subsequent phases should extend current routes/controllers/models **without changing** response contract or authentication/session primitives.
+- [ ] Running `database/database.sql` on a clean DB is idempotent.
+- [ ] Seed script can run repeatedly without duplicate unique records.
+- [ ] Existing bootstrap autoload still works.
+- [ ] No PHP warnings/notices on `/public/db-test.php`.

@@ -8,6 +8,11 @@ class Router
 {
     private array $routes = [];
 
+    public function routeCount(): int
+    {
+        return array_sum(array_map('count', $this->routes));
+    }
+
     public function add(string $method, string $path, callable|array $handler): void
     {
         $this->routes[strtoupper($method)][rtrim($path, '/') ?: '/'] = $handler;

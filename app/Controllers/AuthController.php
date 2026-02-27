@@ -87,7 +87,18 @@ class AuthController
 
     public function logout(): void
     {
+        $csrf = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
+        if (!Security::verifyCsrf(is_string($csrf) ? $csrf : null)) {
+            Response::json(false, 'Invalid CSRF token', [], ['csrf' => 'Token mismatch'], 419);
+        }
+
+        $_SESSION = [];
+        if (ini_get('session.use_cookies')) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000, $params['path'] ?? '/', $params['domain'] ?? '', (bool) ($params['secure'] ?? false), (bool) ($params['httponly'] ?? true));
+        }
         session_destroy();
+
         Response::json(true, 'Logged out');
     }
 }
