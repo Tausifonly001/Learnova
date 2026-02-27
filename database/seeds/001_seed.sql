@@ -13,10 +13,19 @@ ON DUPLICATE KEY UPDATE bio = VALUES(bio);
 
 INSERT INTO categories (name, slug)
 VALUES
-('Web Development', 'web-development'),
-('UI/UX Design', 'ui-ux-design'),
-('AI & Automation', 'ai-automation'),
-('Digital Marketing', 'digital-marketing')
+  ('Web Development', 'web-development'),
+  ('UI/UX Design', 'ui-ux-design'),
+  ('AI & Automation', 'ai-automation'),
+  ('Digital Marketing', 'digital-marketing')
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+INSERT INTO tags (name, slug)
+VALUES
+  ('JavaScript', 'javascript'),
+  ('PHP', 'php'),
+  ('UI Animation', 'ui-animation'),
+  ('Figma', 'figma'),
+  ('Productivity', 'productivity')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
 INSERT INTO tags (name, slug)

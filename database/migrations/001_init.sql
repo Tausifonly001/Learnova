@@ -43,9 +43,9 @@ CREATE TABLE users (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_users_role_status (role, status)
-);
+) ENGINE=InnoDB;
 
-CREATE TABLE profiles (
+CREATE TABLE IF NOT EXISTS profiles (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id BIGINT UNSIGNED NOT NULL UNIQUE,
   avatar_url VARCHAR(255) NULL,
@@ -56,9 +56,9 @@ CREATE TABLE profiles (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_profiles_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
-CREATE TABLE creator_verification (
+CREATE TABLE IF NOT EXISTS creator_verification (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id BIGINT UNSIGNED NOT NULL UNIQUE,
   id_document_path VARCHAR(255) NULL,
@@ -72,24 +72,24 @@ CREATE TABLE creator_verification (
   CONSTRAINT fk_creator_verification_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_creator_verification_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
   INDEX idx_creator_verification_status (status)
-);
+) ENGINE=InnoDB;
 
-CREATE TABLE categories (
+CREATE TABLE IF NOT EXISTS categories (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(80) NOT NULL,
   slug VARCHAR(90) NOT NULL UNIQUE,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB;
 
-CREATE TABLE tags (
+CREATE TABLE IF NOT EXISTS tags (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(80) NOT NULL,
   slug VARCHAR(90) NOT NULL UNIQUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB;
 
-CREATE TABLE courses (
+CREATE TABLE IF NOT EXISTS courses (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   creator_id BIGINT UNSIGNED NOT NULL,
   category_id BIGINT UNSIGNED NOT NULL,
@@ -109,17 +109,17 @@ CREATE TABLE courses (
   CONSTRAINT fk_courses_category FOREIGN KEY (category_id) REFERENCES categories(id),
   INDEX idx_courses_status_category (status, category_id),
   FULLTEXT INDEX ftx_courses_search (title, short_description, description)
-);
+) ENGINE=InnoDB;
 
-CREATE TABLE course_tags (
+CREATE TABLE IF NOT EXISTS course_tags (
   course_id BIGINT UNSIGNED NOT NULL,
   tag_id BIGINT UNSIGNED NOT NULL,
   PRIMARY KEY (course_id, tag_id),
   CONSTRAINT fk_course_tags_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
   CONSTRAINT fk_course_tags_tag FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
-CREATE TABLE course_sections (
+CREATE TABLE IF NOT EXISTS course_sections (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   course_id BIGINT UNSIGNED NOT NULL,
   title VARCHAR(180) NOT NULL,
@@ -128,9 +128,9 @@ CREATE TABLE course_sections (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_course_sections_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
   INDEX idx_course_sections_course_order (course_id, sort_order)
-);
+) ENGINE=InnoDB;
 
-CREATE TABLE lessons (
+CREATE TABLE IF NOT EXISTS lessons (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   course_id BIGINT UNSIGNED NOT NULL,
   section_id BIGINT UNSIGNED NOT NULL,
@@ -146,9 +146,9 @@ CREATE TABLE lessons (
   CONSTRAINT fk_lessons_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
   CONSTRAINT fk_lessons_section FOREIGN KEY (section_id) REFERENCES course_sections(id) ON DELETE CASCADE,
   INDEX idx_lessons_course_section_order (course_id, section_id, sort_order)
-);
+) ENGINE=InnoDB;
 
-CREATE TABLE pricing (
+CREATE TABLE IF NOT EXISTS pricing (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   course_id BIGINT UNSIGNED NOT NULL UNIQUE,
   one_time_enabled TINYINT(1) NOT NULL DEFAULT 1,
@@ -162,7 +162,7 @@ CREATE TABLE pricing (
   INDEX idx_pricing_subscription_enabled (subscription_enabled)
 );
 
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id BIGINT UNSIGNED NOT NULL,
   order_number VARCHAR(30) NOT NULL UNIQUE,
@@ -175,9 +175,9 @@ CREATE TABLE orders (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id),
   INDEX idx_orders_user_status (user_id, status)
-);
+) ENGINE=InnoDB;
 
-CREATE TABLE order_items (
+CREATE TABLE IF NOT EXISTS order_items (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   order_id BIGINT UNSIGNED NOT NULL,
   course_id BIGINT UNSIGNED NOT NULL,
@@ -190,9 +190,9 @@ CREATE TABLE order_items (
   CONSTRAINT fk_order_items_course FOREIGN KEY (course_id) REFERENCES courses(id),
   CONSTRAINT fk_order_items_pricing FOREIGN KEY (pricing_id) REFERENCES pricing(id),
   INDEX idx_order_items_order_course (order_id, course_id)
-);
+) ENGINE=InnoDB;
 
-CREATE TABLE payments (
+CREATE TABLE IF NOT EXISTS payments (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   order_id BIGINT UNSIGNED NOT NULL,
   provider VARCHAR(50) NOT NULL,
@@ -207,9 +207,9 @@ CREATE TABLE payments (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_payments_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
   INDEX idx_payments_status_created (status, created_at)
-);
+) ENGINE=InnoDB;
 
-CREATE TABLE subscriptions (
+CREATE TABLE IF NOT EXISTS subscriptions (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(120) NOT NULL,
   slug VARCHAR(140) NOT NULL UNIQUE,
@@ -222,7 +222,7 @@ CREATE TABLE subscriptions (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-CREATE TABLE user_subscriptions (
+CREATE TABLE IF NOT EXISTS user_subscriptions (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id BIGINT UNSIGNED NOT NULL,
   subscription_id BIGINT UNSIGNED NOT NULL,
@@ -234,9 +234,9 @@ CREATE TABLE user_subscriptions (
   CONSTRAINT fk_user_subscriptions_user FOREIGN KEY (user_id) REFERENCES users(id),
   CONSTRAINT fk_user_subscriptions_subscription FOREIGN KEY (subscription_id) REFERENCES subscriptions(id),
   INDEX idx_user_subscriptions_user_status (user_id, status, end_date)
-);
+) ENGINE=InnoDB;
 
-CREATE TABLE enrollments (
+CREATE TABLE IF NOT EXISTS enrollments (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id BIGINT UNSIGNED NOT NULL,
   course_id BIGINT UNSIGNED NOT NULL,
@@ -248,9 +248,9 @@ CREATE TABLE enrollments (
   CONSTRAINT fk_enrollments_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
   CONSTRAINT fk_enrollments_order_item FOREIGN KEY (order_item_id) REFERENCES order_items(id) ON DELETE SET NULL,
   INDEX idx_enrollments_course (course_id)
-);
+) ENGINE=InnoDB;
 
-CREATE TABLE lesson_progress (
+CREATE TABLE IF NOT EXISTS lesson_progress (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   enrollment_id BIGINT UNSIGNED NOT NULL,
   lesson_id BIGINT UNSIGNED NOT NULL,
@@ -260,9 +260,9 @@ CREATE TABLE lesson_progress (
   UNIQUE KEY uq_enrollment_lesson (enrollment_id, lesson_id),
   CONSTRAINT fk_lesson_progress_enrollment FOREIGN KEY (enrollment_id) REFERENCES enrollments(id) ON DELETE CASCADE,
   CONSTRAINT fk_lesson_progress_lesson FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
-CREATE TABLE reviews (
+CREATE TABLE IF NOT EXISTS reviews (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id BIGINT UNSIGNED NOT NULL,
   course_id BIGINT UNSIGNED NOT NULL,
@@ -275,18 +275,18 @@ CREATE TABLE reviews (
   CONSTRAINT fk_reviews_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_reviews_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
   INDEX idx_reviews_course_rating (course_id, rating)
-);
+) ENGINE=InnoDB;
 
-CREATE TABLE wishlists (
+CREATE TABLE IF NOT EXISTS wishlists (
   user_id BIGINT UNSIGNED NOT NULL,
   course_id BIGINT UNSIGNED NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id, course_id),
   CONSTRAINT fk_wishlists_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_wishlists_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
-CREATE TABLE coupons (
+CREATE TABLE IF NOT EXISTS coupons (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   creator_id BIGINT UNSIGNED NOT NULL,
   course_id BIGINT UNSIGNED NULL,
@@ -302,7 +302,7 @@ CREATE TABLE coupons (
   CONSTRAINT fk_coupons_creator FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_coupons_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE SET NULL,
   INDEX idx_coupons_code_active (code, is_active)
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE coupon_usage (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -331,9 +331,9 @@ CREATE TABLE payouts (
   CONSTRAINT fk_payouts_creator FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_payouts_admin FOREIGN KEY (processed_by) REFERENCES users(id) ON DELETE SET NULL,
   INDEX idx_payouts_creator_status (creator_id, status)
-);
+) ENGINE=InnoDB;
 
-CREATE TABLE reports (
+CREATE TABLE IF NOT EXISTS reports (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   reporter_user_id BIGINT UNSIGNED NOT NULL,
   target_type ENUM('course','lesson','review','user') NOT NULL,
@@ -347,7 +347,7 @@ CREATE TABLE reports (
   CONSTRAINT fk_reports_reporter FOREIGN KEY (reporter_user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_reports_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
   INDEX idx_reports_status_created (status, created_at)
-);
+) ENGINE=InnoDB;
 
 CREATE OR REPLACE VIEW reports_flags AS
 SELECT * FROM reports;
@@ -365,4 +365,4 @@ CREATE TABLE audit_logs (
   CONSTRAINT fk_audit_logs_actor FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE SET NULL,
   INDEX idx_audit_logs_action_created (action, created_at),
   INDEX idx_audit_logs_entity (entity_type, entity_id)
-);
+) ENGINE=InnoDB;
