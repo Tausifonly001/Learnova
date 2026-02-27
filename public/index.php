@@ -10,6 +10,8 @@ $router = new Router();
 require base_path('routes/web.php');
 require base_path('routes/api.php');
 
+$_SERVER['LEARNOVA_ROUTES_LOADED'] = (string) $router->routeCount();
+
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 $path = parse_url($requestUri, PHP_URL_PATH) ?: '/';
 $scriptDir = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '')), '/');

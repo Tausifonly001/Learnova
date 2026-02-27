@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Database;
-use PDO;
 
 class User
 {
@@ -13,6 +12,7 @@ class User
     {
         $stmt = Database::connection()->prepare('SELECT * FROM users WHERE email = :email LIMIT 1');
         $stmt->execute(['email' => $email]);
+
         return $stmt->fetch();
     }
 
@@ -46,7 +46,7 @@ class User
         $stmt->execute([
             'action' => $success ? 'auth.login.success' : 'auth.login.failed',
             'entity_type' => 'auth',
-            'metadata' => json_encode(['email' => $email], JSON_UNESCAPED_UNICODE),
+            'metadata' => json_encode(['email' => strtolower(trim($email))], JSON_UNESCAPED_UNICODE),
             'ip_address' => $ip,
         ]);
     }
@@ -55,15 +55,20 @@ class User
     {
         $minutes = (int) env('LOGIN_LOCK_MINUTES', '15');
         $maxAttempts = (int) env('LOGIN_MAX_ATTEMPTS', '5');
+        $cutoff = (new \DateTimeImmutable(sprintf('-%d minutes', max(1, $minutes))))->format('Y-m-d H:i:s');
+
         $stmt = Database::connection()->prepare(
-            'SELECT COUNT(*) FROM audit_logs WHERE action = :action AND (metadata LIKE :email OR ip_address = :ip)
-             AND created_at >= (NOW() - INTERVAL :minutes MINUTE)'
+            'SELECT COUNT(*) FROM audit_logs
+             WHERE action = :action
+             AND created_at >= :cutoff
+             AND (metadata LIKE :email OR ip_address = :ip)'
         );
-        $stmt->bindValue(':action', 'auth.login.failed');
-        $stmt->bindValue(':email', '%"email":"' . $email . '"%');
-        $stmt->bindValue(':ip', $ip);
-        $stmt->bindValue(':minutes', $minutes, PDO::PARAM_INT);
-        $stmt->execute();
+        $stmt->execute([
+            'action' => 'auth.login.failed',
+            'cutoff' => $cutoff,
+            'email' => '%"email":"' . strtolower(trim($email)) . '"%',
+            'ip' => $ip,
+        ]);
 
         return (int) $stmt->fetchColumn() >= $maxAttempts;
     }

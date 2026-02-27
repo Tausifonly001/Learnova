@@ -10,9 +10,13 @@ class Session
     {
         if (session_status() === PHP_SESSION_NONE) {
             session_name((string) env('SESSION_NAME', 'learnova_session'));
+
+            $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+
             session_set_cookie_params([
                 'httponly' => true,
-                'secure' => isset($_SERVER['HTTPS']),
+                'secure' => $isHttps,
                 'samesite' => 'Lax',
                 'path' => '/',
             ]);

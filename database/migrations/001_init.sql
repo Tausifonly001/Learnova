@@ -1,7 +1,37 @@
 CREATE DATABASE IF NOT EXISTS learnova CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE learnova;
 
-CREATE TABLE IF NOT EXISTS users (
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP TABLE IF EXISTS audit_logs;
+DROP VIEW IF EXISTS reports_flags;
+DROP TABLE IF EXISTS reports;
+DROP TABLE IF EXISTS payouts;
+DROP TABLE IF EXISTS coupon_usage;
+DROP TABLE IF EXISTS coupons;
+DROP TABLE IF EXISTS wishlists;
+DROP TABLE IF EXISTS reviews;
+DROP TABLE IF EXISTS lesson_progress;
+DROP TABLE IF EXISTS enrollments;
+DROP TABLE IF EXISTS user_subscriptions;
+DROP TABLE IF EXISTS subscriptions;
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS pricing;
+DROP TABLE IF EXISTS lessons;
+DROP TABLE IF EXISTS course_sections;
+DROP TABLE IF EXISTS course_tags;
+DROP TABLE IF EXISTS courses;
+DROP TABLE IF EXISTS tags;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS creator_verification;
+DROP TABLE IF EXISTS profiles;
+DROP TABLE IF EXISTS users;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+CREATE TABLE users (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(120) NOT NULL,
   email VARCHAR(190) NOT NULL UNIQUE,
@@ -30,14 +60,15 @@ CREATE TABLE IF NOT EXISTS profiles (
 
 CREATE TABLE IF NOT EXISTS creator_verification (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  user_id BIGINT UNSIGNED NOT NULL,
-  id_document_url VARCHAR(255) NULL,
+  user_id BIGINT UNSIGNED NOT NULL UNIQUE,
+  id_document_path VARCHAR(255) NULL,
   portfolio_url VARCHAR(255) NULL,
   status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
   reviewed_by BIGINT UNSIGNED NULL,
   reviewed_at DATETIME NULL,
-  notes TEXT NULL,
+  rejection_reason VARCHAR(255) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_creator_verification_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_creator_verification_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
   INDEX idx_creator_verification_status (status)
@@ -47,6 +78,7 @@ CREATE TABLE IF NOT EXISTS categories (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(80) NOT NULL,
   slug VARCHAR(90) NOT NULL UNIQUE,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -67,9 +99,9 @@ CREATE TABLE IF NOT EXISTS courses (
   description MEDIUMTEXT NULL,
   level ENUM('beginner','intermediate','advanced') DEFAULT 'beginner',
   language VARCHAR(40) DEFAULT 'English',
-  thumbnail_url VARCHAR(255) NULL,
-  status ENUM('draft','pending_approval','approved','rejected') NOT NULL DEFAULT 'draft',
-  is_subscription_enabled TINYINT(1) NOT NULL DEFAULT 0,
+  thumbnail_path VARCHAR(255) NULL,
+  status ENUM('draft','pending','approved','rejected') NOT NULL DEFAULT 'draft',
+  rejection_reason VARCHAR(255) NULL,
   published_at DATETIME NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -93,6 +125,7 @@ CREATE TABLE IF NOT EXISTS course_sections (
   title VARCHAR(180) NOT NULL,
   sort_order INT NOT NULL DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_course_sections_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
   INDEX idx_course_sections_course_order (course_id, sort_order)
 ) ENGINE=InnoDB;
@@ -105,7 +138,7 @@ CREATE TABLE IF NOT EXISTS lessons (
   content_type ENUM('video','article','resource') NOT NULL DEFAULT 'video',
   video_url VARCHAR(255) NULL,
   content LONGTEXT NULL,
-  duration_seconds INT NOT NULL DEFAULT 0,
+  duration_seconds INT UNSIGNED NOT NULL DEFAULT 0,
   is_preview TINYINT(1) NOT NULL DEFAULT 0,
   sort_order INT NOT NULL DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -117,16 +150,17 @@ CREATE TABLE IF NOT EXISTS lessons (
 
 CREATE TABLE IF NOT EXISTS pricing (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  course_id BIGINT UNSIGNED NOT NULL,
-  price_type ENUM('one_time','subscription') NOT NULL DEFAULT 'one_time',
-  amount DECIMAL(10,2) NOT NULL,
+  course_id BIGINT UNSIGNED NOT NULL UNIQUE,
+  one_time_enabled TINYINT(1) NOT NULL DEFAULT 1,
+  one_time_price DECIMAL(10,2) NULL,
+  subscription_enabled TINYINT(1) NOT NULL DEFAULT 0,
+  subscription_price DECIMAL(10,2) NULL,
   currency CHAR(3) NOT NULL DEFAULT 'USD',
-  is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_pricing_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
-  INDEX idx_pricing_course_type_active (course_id, price_type, is_active)
-) ENGINE=InnoDB;
+  INDEX idx_pricing_subscription_enabled (subscription_enabled)
+);
 
 CREATE TABLE IF NOT EXISTS orders (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -138,6 +172,7 @@ CREATE TABLE IF NOT EXISTS orders (
   grand_total DECIMAL(10,2) NOT NULL,
   status ENUM('pending','paid','failed','refunded') NOT NULL DEFAULT 'pending',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id),
   INDEX idx_orders_user_status (user_id, status)
 ) ENGINE=InnoDB;
@@ -164,8 +199,8 @@ CREATE TABLE IF NOT EXISTS payments (
   provider_payment_id VARCHAR(120) NULL,
   provider_order_id VARCHAR(120) NULL,
   amount DECIMAL(10,2) NOT NULL,
-  creator_earning DECIMAL(10,2) NOT NULL DEFAULT 0,
   platform_fee DECIMAL(10,2) NOT NULL DEFAULT 0,
+  creator_earning DECIMAL(10,2) NOT NULL DEFAULT 0,
   status ENUM('initiated','captured','failed','refunded') NOT NULL DEFAULT 'initiated',
   webhook_payload JSON NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -178,13 +213,14 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(120) NOT NULL,
   slug VARCHAR(140) NOT NULL UNIQUE,
-  billing_cycle ENUM('monthly','yearly') NOT NULL,
+  billing_cycle ENUM('monthly','annual') NOT NULL,
   amount DECIMAL(10,2) NOT NULL,
   currency CHAR(3) NOT NULL DEFAULT 'USD',
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   features JSON NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
 CREATE TABLE IF NOT EXISTS user_subscriptions (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -194,6 +230,7 @@ CREATE TABLE IF NOT EXISTS user_subscriptions (
   end_date DATETIME NOT NULL,
   status ENUM('active','expired','cancelled') NOT NULL DEFAULT 'active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_user_subscriptions_user FOREIGN KEY (user_id) REFERENCES users(id),
   CONSTRAINT fk_user_subscriptions_subscription FOREIGN KEY (subscription_id) REFERENCES subscriptions(id),
   INDEX idx_user_subscriptions_user_status (user_id, status, end_date)
@@ -232,6 +269,7 @@ CREATE TABLE IF NOT EXISTS reviews (
   rating TINYINT UNSIGNED NOT NULL,
   review TEXT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_review_user_course (user_id, course_id),
   CONSTRAINT chk_rating CHECK (rating BETWEEN 1 AND 5),
   CONSTRAINT fk_reviews_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -251,20 +289,22 @@ CREATE TABLE IF NOT EXISTS wishlists (
 CREATE TABLE IF NOT EXISTS coupons (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   creator_id BIGINT UNSIGNED NOT NULL,
+  course_id BIGINT UNSIGNED NULL,
   code VARCHAR(30) NOT NULL UNIQUE,
   discount_type ENUM('fixed','percent') NOT NULL,
   discount_value DECIMAL(10,2) NOT NULL,
   max_uses INT NULL,
-  used_count INT NOT NULL DEFAULT 0,
   starts_at DATETIME NULL,
   expires_at DATETIME NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_coupons_creator FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_coupons_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE SET NULL,
   INDEX idx_coupons_code_active (code, is_active)
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS coupon_usage (
+CREATE TABLE coupon_usage (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   coupon_id BIGINT UNSIGNED NOT NULL,
   user_id BIGINT UNSIGNED NOT NULL,
@@ -274,11 +314,11 @@ CREATE TABLE IF NOT EXISTS coupon_usage (
   CONSTRAINT fk_coupon_usage_coupon FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE CASCADE,
   CONSTRAINT fk_coupon_usage_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_coupon_usage_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-  UNIQUE KEY uq_coupon_usage_order (coupon_id, order_id),
-  INDEX idx_coupon_usage_user (user_id)
-) ENGINE=InnoDB;
+  UNIQUE KEY uq_coupon_usage_coupon_order (coupon_id, order_id),
+  INDEX idx_coupon_usage_user (user_id, used_at)
+);
 
-CREATE TABLE IF NOT EXISTS payouts (
+CREATE TABLE payouts (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   creator_id BIGINT UNSIGNED NOT NULL,
   request_amount DECIMAL(10,2) NOT NULL,
@@ -299,6 +339,7 @@ CREATE TABLE IF NOT EXISTS reports (
   target_type ENUM('course','lesson','review','user') NOT NULL,
   target_id BIGINT UNSIGNED NOT NULL,
   reason VARCHAR(255) NOT NULL,
+  details TEXT NULL,
   status ENUM('open','in_review','resolved','dismissed') NOT NULL DEFAULT 'open',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   reviewed_by BIGINT UNSIGNED NULL,
@@ -308,7 +349,10 @@ CREATE TABLE IF NOT EXISTS reports (
   INDEX idx_reports_status_created (status, created_at)
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS audit_logs (
+CREATE OR REPLACE VIEW reports_flags AS
+SELECT * FROM reports;
+
+CREATE TABLE audit_logs (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   actor_user_id BIGINT UNSIGNED NULL,
   action VARCHAR(120) NOT NULL,

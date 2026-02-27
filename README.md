@@ -1,44 +1,13 @@
-# Learnova — Phase 1 (MVC Architecture + Database Foundation)
+# Learnova — Phase 1 Foundation (Architecture + Database)
 
-This delivery provides the production-ready **foundation** for Learnova using Core PHP MVC + MySQL.
-
-## What is included in Phase 1
-- Finalized MVC folder structure for `htdocs/Learnova`.
-- Environment loader with `.env.example`.
-- Centralized config files (`app/Config/app.php`, `app/Config/database.php`).
-- PDO singleton database connection.
-- Normalized SQL schema with foreign keys and indexes for:
-  - users/profiles/creator verification
-  - categories/tags/course mapping
-  - courses/sections/lessons/pricing
-  - enrollments/progress
-  - orders/order_items/payments (with `platform_fee` + `creator_earning`)
-  - subscriptions/user_subscriptions
-  - reviews/wishlist
-  - coupons/coupon_usage
-  - payouts
-  - reports
-  - audit logs
-- Seed data:
-  - Admin account
-  - Demo creator account
-  - Sample categories
-  - Sample tags
-  - 1 approved demo course + pricing + mapped tags
-- DB connection test page at `/public` root.
-
-## Folder Structure
+## Updated Folder Tree
 
 ```txt
 Learnova/
 ├─ app/
 │  ├─ Config/
-│  │  ├─ app.php
-│  │  └─ database.php
+│  │  └─ Config.php
 │  ├─ Controllers/
-│  │  ├─ AuthController.php
-│  │  ├─ CourseController.php
-│  │  └─ PageController.php
 │  ├─ Core/
 │  │  ├─ Database.php
 │  │  ├─ Response.php
@@ -47,58 +16,79 @@ Learnova/
 │  │  ├─ Session.php
 │  │  ├─ Validator.php
 │  │  └─ View.php
-│  ├─ Helpers/common.php
+│  ├─ Helpers/
+│  │  └─ common.php
 │  ├─ Models/
-│  │  ├─ Course.php
-│  │  └─ User.php
 │  └─ Views/
-│     ├─ layouts/app.php
-│     ├─ pages/home.php
-│     └─ partials/auth_modals.php
 ├─ bootstrap/
 │  ├─ app.php
 │  └─ env.php
 ├─ database/
-│  ├─ migrations/001_init.sql
-│  ├─ seeds/001_seed.sql
-│  └─ database.sql
+│  ├─ database.sql
+│  ├─ migrations/
+│  │  └─ 001_init.sql
+│  └─ seeds/
+│     └─ 001_seed.sql
 ├─ public/
-│  ├─ .htaccess
-│  ├─ assets/js/app.js
+│  ├─ assets/
+│  ├─ db-test.php
 │  └─ index.php
 ├─ routes/
 │  ├─ api.php
 │  └─ web.php
-├─ storage/uploads/.gitkeep
-├─ .env.example
-└─ README.md
+├─ storage/
+└─ .env.example
 ```
 
+## What Phase 1 Includes
+
+- MVC-friendly folder structure for Core PHP app organization.
+- `.env.example` environment template.
+- Config loader (`App\Config\Config`) wired via `bootstrap/env.php`.
+- PDO singleton (`App\Core\Database`) for centralized DB access.
+- Fully normalized MySQL schema in `database/database.sql` plus split migration/seed files.
+- Tables included:
+  - users, profiles, creator_verification
+  - categories, tags, course_tags
+  - courses, course_sections, lessons, pricing
+  - orders, order_items, payments
+  - subscriptions, user_subscriptions
+  - enrollments, lesson_progress
+  - reviews, wishlists
+  - coupons, coupon_usage
+  - payouts
+  - reports (with compatibility view: reports_flags)
+  - audit_logs
+- Seed data:
+  - Admin user
+  - Demo creator and student
+  - Sample categories and tags
+  - One approved demo course + section + lesson + pricing
+- DB connection test page at `/public/db-test.php`.
+
 ## XAMPP Setup (htdocs/Learnova)
-1. Copy this project into: `xampp/htdocs/Learnova`.
-2. Create `.env` from `.env.example`.
-3. Update DB credentials in `.env`.
-4. Start Apache + MySQL in XAMPP.
-5. Import database in one of two ways:
-   - Single file: `database/database.sql`
-   - Two-step: `database/migrations/001_init.sql` then `database/seeds/001_seed.sql`
-6. Open `http://localhost/Learnova/public`.
 
-If successful, the page shows **Database connection successful** and server timestamp.
+1. Put project under `xampp/htdocs/Learnova`.
+2. Copy `.env.example` to `.env` and set DB credentials.
+3. Start Apache + MySQL in XAMPP.
+4. Import SQL:
+   - Preferred: run `database/database.sql` once.
+   - Alternative: run `database/migrations/001_init.sql`, then `database/seeds/001_seed.sql`.
+5. Open:
+   - App entry: `http://localhost/Learnova/public`
+   - DB health check: `http://localhost/Learnova/public/db-test.php`
 
-## Seeded Accounts
-- Admin: `admin@learnova.test`
-- Demo Creator: `creator@learnova.test`
-- Both use the seeded bcrypt hash from SQL (replace before production).
+## Test Checklist
 
-## Test Checklist (Phase 1)
-- [ ] Schema imports without FK/index errors.
-- [ ] `users`, `courses`, `orders`, `payments`, `payouts`, `audit_logs` tables are created.
-- [ ] `coupon_usage` exists and references coupons/users/orders.
-- [ ] Seed inserts admin, demo creator, categories, tags, and demo course.
-- [ ] `/public` root shows DB success status.
+- [ ] `.env` loads expected values.
+- [ ] `Database::connection()` returns active PDO instance.
+- [ ] All tables are created with foreign keys and indexes.
+- [ ] Seed users/categories/tags/demo course inserted.
+- [ ] `db-test.php` reports connection `ok`.
 
-## Regression Checklist
-- [ ] Existing routes still resolve through `public/index.php`.
-- [ ] API response contract remains `{ success, message, data, errors }`.
-- [ ] PDO prepared statements remain enabled (`ATTR_EMULATE_PREPARES=false`).
+## Regression Checklist (Phase 1 baseline)
+
+- [ ] Running `database/database.sql` on a clean DB is idempotent.
+- [ ] Seed script can run repeatedly without duplicate unique records.
+- [ ] Existing bootstrap autoload still works.
+- [ ] No PHP warnings/notices on `/public/db-test.php`.
